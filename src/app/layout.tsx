@@ -4,7 +4,6 @@ import {
   Show,
   SignInButton,
   SignUpButton,
-  UserButton,
 } from "@clerk/nextjs"
 
 import "./globals.css"
@@ -51,12 +50,7 @@ export default function RootLayout({
               </main>
             </Show>
 
-            <Show when="signed-in">
-              <header className="flex h-16 items-center justify-end gap-4 p-4">
-                <UserButton />
-              </header>
-              <main className="p-4">{children}</main>
-            </Show>
+            <Show when="signed-in">{children}</Show>
           </ClerkProvider>
         </ThemeProvider>
       </body>

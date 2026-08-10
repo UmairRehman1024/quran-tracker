@@ -1,44 +1,24 @@
-import { desc } from "drizzle-orm"
+import { CheckInButton } from "@/src/components/check-in-button"
+import { HomeHeader } from "@/src/components/home-header"
 
-import { DbTestForm } from "@/src/components/db-test-form"
-import { db } from "@/src/db/db"
-import { usersTable } from "@/src/db/schema"
+const QUOTE =
+  "Read the Quran, for indeed it will come on the Day of Resurrection as an intercessor for its companions."
 
-
-export default async function Page() {
-  const users = await db.select().from(usersTable).orderBy(desc(usersTable.id))
-
+export default function Page() {
   return (
-    <div className="flex min-h-svh p-6">
-      <div className="flex w-full max-w-md min-w-0 flex-col gap-8 text-sm leading-loose">
-        <div>
-          <h1 className="font-medium">DB smoke test</h1>
-          <p className="text-muted-foreground">
-            Add a user to confirm Neon + Drizzle are wired up.
-          </p>
-        </div>
+    <main className="flex min-h-svh flex-col px-6 py-8 sm:px-10 sm:py-10">
+      <HomeHeader />
 
-        <DbTestForm />
-
-        <div className="flex flex-col gap-2">
-          <h2 className="font-medium">Users ({users.length})</h2>
-          {users.length === 0 ? (
-            <p className="text-muted-foreground">No users yet.</p>
-          ) : (
-            <ul className="flex flex-col gap-2 font-mono text-xs">
-              {users.map((user) => (
-                <li key={user.id} className="border-b border-border pb-2">
-                  #{user.id} · {user.name} · {user.email} · age {user.age}
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
-
-        <div className="font-mono text-xs text-muted-foreground">
-          (Press <kbd>d</kbd> to toggle dark mode)
-        </div>
+      <div className="flex flex-1 flex-col items-center justify-center">
+        <CheckInButton />
       </div>
-    </div>
+
+      <footer className="mx-auto w-full max-w-md space-y-5 pb-2">
+        <div className="h-px w-full bg-border" />
+        <p className="text-center text-sm font-light leading-relaxed text-muted-foreground">
+          &ldquo;{QUOTE}&rdquo;
+        </p>
+      </footer>
+    </main>
   )
 }
