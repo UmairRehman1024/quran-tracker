@@ -2,7 +2,7 @@
 
 import { useActionState } from "react"
 
-import { createUser } from "@/src/app/actions"
+import { createUser } from "@/src/server/actions"
 import { Button } from "@/src/components/ui/button"
 
 type FormState = { ok: true } | { ok: false; error: string }

@@ -1,8 +1,9 @@
 import { desc } from "drizzle-orm"
 
-import { DbTestForm } from "@/src/app/db-test-form"
+import { DbTestForm } from "@/src/components/db-test-form"
 import { db } from "@/src/db/db"
 import { usersTable } from "@/src/db/schema"
+
 
 export default async function Page() {
   const users = await db.select().from(usersTable).orderBy(desc(usersTable.id))
