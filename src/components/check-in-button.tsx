@@ -1,23 +1,29 @@
 "use client"
 
+import { useRouter } from "next/navigation"
 import { useState } from "react"
 
 import { cn } from "@/lib/utils"
-import { addQuranLog } from "../server/actions"
-import { toast } from "./ui/toast"
+import { addQuranLog } from "@/server/actions"
+import { toast } from "@/components/ui/toast"
 
-
-export function CheckInButton() {
-  const [read, setRead] = useState(false)
+export function CheckInButton({ checkedInToday }: { checkedInToday: boolean }) {
+  const router = useRouter()
+  const [read, setRead] = useState(checkedInToday)
 
   return (
     <button
       type="button"
       aria-pressed={read}
-      disabled={read}//added so no mismatch in client state and db
+      disabled={read}
       onClick={async () => {
         const result = await addQuranLog()
         if (!result.ok) {
+          if (result.error === "already_exists") {
+            setRead(true)
+            router.refresh()
+            return
+          }
           console.error("Failed to add quran log:", result.error)
           toast.add({
             type: "error",
@@ -31,6 +37,7 @@ export function CheckInButton() {
             description: "You can check in again tomorrow",
           })
           setRead(true)
+          router.refresh()
         }
       }}
       className={cn(
