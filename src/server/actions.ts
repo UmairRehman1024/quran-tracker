@@ -161,7 +161,7 @@ export async function getQuranLogs() {
   const { userId } = authResult
 
   const logs = await db
-    .select()
+    .select({ date: quranLogs.date })
     .from(quranLogs)
     .where(eq(quranLogs.userId, userId))
 
