@@ -12,8 +12,7 @@ import {
 // 1. Users Table (Populated via Clerk Webhook on sign-up)
 export const users = pgTable("users", {
   id: varchar("id", { length: 256 }).primaryKey(), // Clerk User ID
-  email: varchar("email", { length: 256 }).notNull().unique(),
-  timezone: varchar("timezone", { length: 100 }).default("UTC").notNull(),
+  timezone: varchar("timezone", { length: 100 }).default("Europe/London").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
   
   // Keeps the MVP interactive with streak counts
