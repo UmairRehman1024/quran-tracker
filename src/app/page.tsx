@@ -1,5 +1,5 @@
-import { CheckInButton } from "@/src/components/check-in-button"
-import { HomeHeader } from "@/src/components/home-header"
+import { CheckInButton } from "@/components/check-in-button"
+import { HomeHeader } from "@/components/home-header"
 
 const QUOTE =
   "Read the Quran, for indeed it will come on the Day of Resurrection as an intercessor for its companions."

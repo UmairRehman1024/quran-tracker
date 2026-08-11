@@ -1,8 +1,8 @@
 import { verifyWebhook } from "@clerk/nextjs/webhooks"
 import { NextRequest } from "next/server"
 
-import { db } from "@/src/db/db"
-import { users } from "@/src/db/schema"
+import { db } from "@/db/db"
+import { users } from "@/db/schema"
 
 export async function POST(req: NextRequest) {
   let evt

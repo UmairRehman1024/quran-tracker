@@ -7,9 +7,11 @@ import {
 } from "@clerk/nextjs"
 
 import "./globals.css"
-import { ThemeProvider } from "@/src/components/theme-provider"
-import { Button } from "@/src/components/ui/button"
-import { cn } from "@/src/lib/utils"
+import { ThemeProvider } from "@/components/theme-provider"
+import { Button } from "@/components/ui/button"
+import { cn } from "@/lib/utils"
+
+import { Toaster } from "@/components/ui/toast"
 
 const inter = Inter({ subsets: ["latin"], variable: "--font-sans" })
 
@@ -51,6 +53,7 @@ export default function RootLayout({
             </Show>
 
             <Show when="signed-in">{children}</Show>
+            <Toaster />
           </ClerkProvider>
         </ThemeProvider>
       </body>
