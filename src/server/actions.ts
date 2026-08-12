@@ -28,11 +28,14 @@ async function requireClerkUserId() {
 }
 
 export async function addQuranLog() {
+
+  //checking auth
   const authResult = await requireClerkUserId()
   if (!authResult.ok) return authResult
 
   const { userId } = authResult
 
+  //getting timezone, current streak, and longest streak from the database
   const [dbUser] = await db
     .select({
       timezone: users.timezone,
@@ -43,48 +46,57 @@ export async function addQuranLog() {
     .where(eq(users.id, userId))
     .limit(1)
 
+  //if the user is not found, return an error
   if (!dbUser) {
     console.error("DB user not found (webhook lag?)", userId)
     return { ok: false as const, error: "db_user_not_found" as const }
   }
 
+  //getting today and yesterday in the user's timezone
   const today = todayInTimezone(dbUser.timezone)
   const yesterday = yesterdayInTimezone(dbUser.timezone)
 
+  //checking if the user has already logged today
   const [existingToday] = await db
     .select({ id: quranLogs.id })
     .from(quranLogs)
     .where(and(eq(quranLogs.userId, userId), eq(quranLogs.date, today)))
     .limit(1)
 
+  //if the user has already logged today, return an error
   if (existingToday) {
     return { ok: false as const, error: "already_exists" as const }
   }
 
+  //inserting the log into the database
   try {
     await db.insert(quranLogs).values({
       userId,
       date: today,
     })
   } catch (error) {
+    //if the log is not unique, return an error
     if (isUniqueViolation(error)) {
       return { ok: false as const, error: "already_exists" as const }
     }
     throw error
   }
 
+  //checking if the user has logged yesterday
   const [yesterdayLog] = await db
     .select({ id: quranLogs.id })
     .from(quranLogs)
     .where(and(eq(quranLogs.userId, userId), eq(quranLogs.date, yesterday)))
     .limit(1)
 
+  //calculating the new streak
   const streaks = nextStreak({
     currentStreak: dbUser.currentStreak,
     longestStreak: dbUser.longestStreak,
     hadLogYesterday: Boolean(yesterdayLog),
   })
 
+  //updating the user's streak in the database
   await db
     .update(users)
     .set({
@@ -93,6 +105,7 @@ export async function addQuranLog() {
     })
     .where(eq(users.id, userId))
 
+  //returning the new streak
   return {
     ok: true as const,
     currentStreak: streaks.currentStreak,
