@@ -14,10 +14,6 @@ export const users = pgTable("users", {
   id: varchar("id", { length: 256 }).primaryKey(), // Clerk User ID
   timezone: varchar("timezone", { length: 100 }).default("Europe/London").notNull(),
   createdAt: timestamp("created_at").defaultNow().notNull(),
-  
-  // Keeps the MVP interactive with streak counts
-  currentStreak: integer("current_streak").default(0).notNull(),
-  longestStreak: integer("longest_streak").default(0).notNull(),
 });
 
 // 2. Quran Logs Table (A row exists = they read on that day)

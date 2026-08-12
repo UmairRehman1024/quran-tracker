@@ -1,12 +1,12 @@
 "use server"
 
-import { and, desc, eq } from "drizzle-orm"
+import { and, eq } from "drizzle-orm"
 import { auth, currentUser } from "@clerk/nextjs/server"
 
 import { db } from "@/db/db"
 import { quranLogs, users } from "@/db/schema"
 import { todayInTimezone, yesterdayInTimezone } from "@/lib/dates"
-import { effectiveStreak, nextStreak } from "@/lib/streak"
+import { currentStreak, longestStreak } from "@/lib/streak"
 
 function isUniqueViolation(error: unknown): boolean {
   if (!error || typeof error !== "object") return false
@@ -27,6 +27,14 @@ async function requireClerkUserId() {
   return { ok: true as const, userId: clerkUser.id }
 }
 
+async function getUserLogDates(userId: string): Promise<string[]> {
+  const logs = await db
+    .select({ date: quranLogs.date })
+    .from(quranLogs)
+    .where(eq(quranLogs.userId, userId))
+  return logs.map((log) => log.date)
+}
+
 export async function addQuranLog() {
 
   //checking auth
@@ -35,12 +43,11 @@ export async function addQuranLog() {
 
   const { userId } = authResult
 
-  //getting timezone, current streak, and longest streak from the database
+
+  //getting timezone from the database
   const [dbUser] = await db
     .select({
       timezone: users.timezone,
-      currentStreak: users.currentStreak,
-      longestStreak: users.longestStreak,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -82,34 +89,12 @@ export async function addQuranLog() {
     throw error
   }
 
-  //checking if the user has logged yesterday
-  const [yesterdayLog] = await db
-    .select({ id: quranLogs.id })
-    .from(quranLogs)
-    .where(and(eq(quranLogs.userId, userId), eq(quranLogs.date, yesterday)))
-    .limit(1)
+  const logDates = await getUserLogDates(userId)
 
-  //calculating the new streak
-  const streaks = nextStreak({
-    currentStreak: dbUser.currentStreak,
-    longestStreak: dbUser.longestStreak,
-    hadLogYesterday: Boolean(yesterdayLog),
-  })
-
-  //updating the user's streak in the database
-  await db
-    .update(users)
-    .set({
-      currentStreak: streaks.currentStreak,
-      longestStreak: streaks.longestStreak,
-    })
-    .where(eq(users.id, userId))
-
-  //returning the new streak
   return {
     ok: true as const,
-    currentStreak: streaks.currentStreak,
-    longestStreak: streaks.longestStreak,
+    currentStreak: currentStreak(logDates, today, yesterday),
+    longestStreak: longestStreak(logDates),
   }
 }
 
@@ -122,8 +107,6 @@ export async function getHomeStreak() {
   const [dbUser] = await db
     .select({
       timezone: users.timezone,
-      currentStreak: users.currentStreak,
-      longestStreak: users.longestStreak,
     })
     .from(users)
     .where(eq(users.id, userId))
@@ -136,34 +119,13 @@ export async function getHomeStreak() {
 
   const today = todayInTimezone(dbUser.timezone)
   const yesterday = yesterdayInTimezone(dbUser.timezone)
-
-  const [latestLog] = await db
-    .select({ date: quranLogs.date })
-    .from(quranLogs)
-    .where(eq(quranLogs.userId, userId))
-    .orderBy(desc(quranLogs.date))
-    .limit(1)
-
-  const lastLogDate = latestLog?.date ?? null
-  const currentStreak = effectiveStreak({
-    currentStreak: dbUser.currentStreak,
-    lastLogDate,
-    today,
-    yesterday,
-  })
-
-  if (currentStreak === 0 && dbUser.currentStreak > 0) {
-    await db
-      .update(users)
-      .set({ currentStreak: 0 })
-      .where(eq(users.id, userId))
-  }
+  const logDates = await getUserLogDates(userId)
 
   return {
     ok: true as const,
-    currentStreak,
-    longestStreak: dbUser.longestStreak,
-    checkedInToday: lastLogDate === today,
+    currentStreak: currentStreak(logDates, today, yesterday),
+    longestStreak: longestStreak(logDates),
+    checkedInToday: logDates.includes(today),
   }
 }
 
