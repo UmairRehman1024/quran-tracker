@@ -12,13 +12,13 @@ export default async function OnboardingPage() {
 
   return (
     <main className="flex min-h-svh flex-col items-center justify-center px-6 py-8">
-      <div className="flex w-full max-w-sm flex-col items-center gap-6">
+      <div className="flex w-full max-w-md flex-col items-center gap-6">
         <div className="space-y-2 text-center">
           <h1 className="text-2xl font-semibold tracking-tight">
             Choose your timezone
           </h1>
           <p className="text-sm text-muted-foreground">
-            Used to count your reading day in local time.
+            Streaks count by your local calendar day. Pick the city you are in.
           </p>
         </div>
         <TimezoneForm timezones={Intl.supportedValuesOf("timeZone")} />
