@@ -29,7 +29,6 @@ export async function POST(req: NextRequest) {
     console.log("Webhook received:", evt.type)
   }
 
-  console.log("Webhook received:", evt.type)
 
   return new Response("OK", { status: 200 })
 }
