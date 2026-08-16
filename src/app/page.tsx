@@ -1,12 +1,21 @@
+import { currentUser } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
+
 import { CheckInButton } from "@/components/check-in-button"
 import { HomeHeader } from "@/components/home-header"
 import { WeeklyCalendar } from "@/components/weekly-calender"
+import { timezoneFromPublicMetadata } from "@/lib/timezone"
 import { getHomeStreak, getQuranLogs } from "@/server/actions"
 
 const QUOTE =
   "Read the Quran, for indeed it will come on the Day of Resurrection as an intercessor for its companions."
 
 export default async function Page() {
+  const user = await currentUser()
+  if (user && !timezoneFromPublicMetadata(user.publicMetadata)) {
+    redirect("/onboarding")
+  }
+
   const [streak, logsResult] = await Promise.all([
     getHomeStreak(),
     getQuranLogs(),

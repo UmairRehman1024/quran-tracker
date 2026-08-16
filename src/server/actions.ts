@@ -1,12 +1,17 @@
 "use server"
 
 import { and, eq } from "drizzle-orm"
-import { auth, currentUser } from "@clerk/nextjs/server"
+import { auth, clerkClient, currentUser } from "@clerk/nextjs/server"
+import { redirect } from "next/navigation"
 
 import { db } from "@/db/db"
-import { quranLogs, users } from "@/db/schema"
+import { quranLogs } from "@/db/schema"
 import { todayInTimezone, yesterdayInTimezone } from "@/lib/dates"
 import { currentStreak, longestStreak } from "@/lib/streak"
+import {
+  isValidTimeZone,
+  timezoneFromPublicMetadata,
+} from "@/lib/timezone"
 
 function isUniqueViolation(error: unknown): boolean {
   if (!error || typeof error !== "object") return false
@@ -18,13 +23,25 @@ function isUniqueViolation(error: unknown): boolean {
   )
 }
 
-async function requireClerkUserId() {
+async function requireClerkUser() {
   await auth.protect()
   const clerkUser = await currentUser()
   if (!clerkUser) {
     return { ok: false as const, error: "user_not_found" as const }
   }
-  return { ok: true as const, userId: clerkUser.id }
+  return { ok: true as const, userId: clerkUser.id, user: clerkUser }
+}
+
+async function requireClerkUserWithTimezone() {
+  const authResult = await requireClerkUser()
+  if (!authResult.ok) return authResult
+
+  const timezone = timezoneFromPublicMetadata(authResult.user.publicMetadata)
+  if (!timezone) {
+    return { ok: false as const, error: "timezone_missing" as const }
+  }
+
+  return { ok: true as const, userId: authResult.userId, timezone }
 }
 
 async function getUserLogDates(userId: string): Promise<string[]> {
@@ -36,53 +53,30 @@ async function getUserLogDates(userId: string): Promise<string[]> {
 }
 
 export async function addQuranLog() {
-
-  //checking auth
-  const authResult = await requireClerkUserId()
+  const authResult = await requireClerkUserWithTimezone()
   if (!authResult.ok) return authResult
 
-  const { userId } = authResult
+  const { userId, timezone } = authResult
 
+  const today = todayInTimezone(timezone)
+  const yesterday = yesterdayInTimezone(timezone)
 
-  //getting timezone from the database
-  const [dbUser] = await db
-    .select({
-      timezone: users.timezone,
-    })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-
-  //if the user is not found, return an error
-  if (!dbUser) {
-    console.error("DB user not found (webhook lag?)", userId)
-    return { ok: false as const, error: "db_user_not_found" as const }
-  }
-
-  //getting today and yesterday in the user's timezone
-  const today = todayInTimezone(dbUser.timezone)
-  const yesterday = yesterdayInTimezone(dbUser.timezone)
-
-  //checking if the user has already logged today
   const [existingToday] = await db
     .select({ id: quranLogs.id })
     .from(quranLogs)
     .where(and(eq(quranLogs.userId, userId), eq(quranLogs.date, today)))
     .limit(1)
 
-  //if the user has already logged today, return an error
   if (existingToday) {
     return { ok: false as const, error: "already_exists" as const }
   }
 
-  //inserting the log into the database
   try {
     await db.insert(quranLogs).values({
       userId,
       date: today,
     })
   } catch (error) {
-    //if the log is not unique, return an error
     if (isUniqueViolation(error)) {
       return { ok: false as const, error: "already_exists" as const }
     }
@@ -99,26 +93,13 @@ export async function addQuranLog() {
 }
 
 export async function getHomeStreak() {
-  const authResult = await requireClerkUserId()
+  const authResult = await requireClerkUserWithTimezone()
   if (!authResult.ok) return authResult
 
-  const { userId } = authResult
+  const { userId, timezone } = authResult
 
-  const [dbUser] = await db
-    .select({
-      timezone: users.timezone,
-    })
-    .from(users)
-    .where(eq(users.id, userId))
-    .limit(1)
-
-  if (!dbUser) {
-    console.error("DB user not found (webhook lag?)", userId)
-    return { ok: false as const, error: "db_user_not_found" as const }
-  }
-
-  const today = todayInTimezone(dbUser.timezone)
-  const yesterday = yesterdayInTimezone(dbUser.timezone)
+  const today = todayInTimezone(timezone)
+  const yesterday = yesterdayInTimezone(timezone)
   const logDates = await getUserLogDates(userId)
 
   return {
@@ -130,7 +111,7 @@ export async function getHomeStreak() {
 }
 
 export async function getQuranLogs() {
-  const authResult = await requireClerkUserId()
+  const authResult = await requireClerkUser()
   if (!authResult.ok) return authResult
 
   const { userId } = authResult
@@ -141,4 +122,21 @@ export async function getQuranLogs() {
     .where(eq(quranLogs.userId, userId))
 
   return { ok: true as const, logs }
+}
+
+export async function saveTimezone(formData: FormData) {
+  const authResult = await requireClerkUser()
+  if (!authResult.ok) return authResult
+
+  const timezone = String(formData.get("timezone") ?? "")
+  if (!isValidTimeZone(timezone)) {
+    return { ok: false as const, error: "invalid_timezone" as const }
+  }
+
+  const client = await clerkClient()
+  await client.users.updateUserMetadata(authResult.userId, {
+    publicMetadata: { timezone },
+  })
+
+  redirect("/")
 }

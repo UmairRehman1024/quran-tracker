@@ -24,6 +24,10 @@ export function CheckInButton({ checkedInToday }: { checkedInToday: boolean }) {
             router.refresh()
             return
           }
+          if (result.error === "timezone_missing") {
+            router.push("/onboarding")
+            return
+          }
           console.error("Failed to add quran log:", result.error)
           toast.add({
             type: "error",
