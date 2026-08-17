@@ -8,14 +8,15 @@ import { db } from "@/db/db"
 import { quranLogs } from "@/db/schema"
 import { todayInTimezone, yesterdayInTimezone } from "@/lib/dates"
 import { currentStreak, longestStreak } from "@/lib/streak"
-import {
-  isValidTimeZone,
-  timezoneFromPublicMetadata,
-} from "@/lib/timezone"
+import { isValidTimeZone, timezoneFromPublicMetadata } from "@/lib/timezone"
 
 function isUniqueViolation(error: unknown): boolean {
   if (!error || typeof error !== "object") return false
-  const e = error as { code?: string; cause?: { code?: string }; message?: string }
+  const e = error as {
+    code?: string
+    cause?: { code?: string }
+    message?: string
+  }
   return (
     e.code === "23505" ||
     e.cause?.code === "23505" ||
@@ -92,7 +93,7 @@ export async function addQuranLog() {
   }
 }
 
-export async function getHomeStreak() {
+export async function getHomeData() {
   const authResult = await requireClerkUserWithTimezone()
   if (!authResult.ok) return authResult
 
@@ -107,21 +108,8 @@ export async function getHomeStreak() {
     currentStreak: currentStreak(logDates, today, yesterday),
     longestStreak: longestStreak(logDates),
     checkedInToday: logDates.includes(today),
+    logDates,
   }
-}
-
-export async function getQuranLogs() {
-  const authResult = await requireClerkUser()
-  if (!authResult.ok) return authResult
-
-  const { userId } = authResult
-
-  const logs = await db
-    .select({ date: quranLogs.date })
-    .from(quranLogs)
-    .where(eq(quranLogs.userId, userId))
-
-  return { ok: true as const, logs }
 }
 
 export async function saveTimezone(formData: FormData) {

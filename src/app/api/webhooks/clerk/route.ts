@@ -14,21 +14,24 @@ export async function POST(req: NextRequest) {
     return new Response("Verification failed", { status: 400 })
   }
 
-  if (evt.type === "user.deleted") {
-    const { id } = evt.data
-    if (id) {
-      try {
-        await db.delete(quranLogs).where(eq(quranLogs.userId, id))
-        console.log("Deleted quran logs for user:", id)
-      } catch (err) {
-        console.error("Failed to delete quran logs:", err)
-        return new Response("Failed to delete quran logs", { status: 500 })
-      }
-    }
-  } else {
-    console.log("Webhook received:", evt.type)
+  if (evt.type !== "user.deleted") {
+    console.warn("Ignoring Clerk webhook", { type: evt.type })
+    return new Response("OK", { status: 200 })
   }
 
+  const { id } = evt.data
+  if (!id) {
+    console.error("user.deleted webhook missing id", { data: evt.data })
+    return new Response("OK", { status: 200 })
+  }
+
+  try {
+    await db.delete(quranLogs).where(eq(quranLogs.userId, id))
+    console.log(`Deleted quran_logs for user ${id}`)
+  } catch (err) {
+    console.error("Failed to delete quran_logs:", err)
+    return new Response("Failed to delete quran logs", { status: 500 })
+  }
 
   return new Response("OK", { status: 200 })
 }

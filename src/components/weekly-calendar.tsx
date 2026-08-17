@@ -22,16 +22,14 @@ export function WeeklyCalendar({ readDates }: { readDates: string[] }) {
 
   return (
     <div className="w-[280px] space-y-4">
-      {/* Custom Header for Week-by-Week Navigation */}
       <div className="flex items-center justify-between">
-        <h2 className="text-sm font-semibold">
-          {format(week, "MMMM yyyy")}
-        </h2>
+        <h2 className="text-sm font-semibold">{format(week, "MMMM yyyy")}</h2>
         <div className="flex gap-1">
           <Button
             variant="outline"
             size="icon"
             className="h-7 w-7"
+            aria-label="Previous week"
             onClick={handlePrevWeek}
           >
             <ChevronLeft className="h-4 w-4" />
@@ -40,6 +38,7 @@ export function WeeklyCalendar({ readDates }: { readDates: string[] }) {
             variant="outline"
             size="icon"
             className="h-7 w-7"
+            aria-label="Next week"
             onClick={handleNextWeek}
           >
             <ChevronRight className="h-4 w-4" />
