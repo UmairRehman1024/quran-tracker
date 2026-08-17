@@ -1,6 +1,6 @@
 "use client"
 
-import { useEffect, useMemo, useState, useSyncExternalStore } from "react"
+import { useMemo, useState, useSyncExternalStore } from "react"
 import { CheckIcon, GlobeIcon } from "lucide-react"
 
 import { Button } from "@/components/ui/button"
@@ -30,6 +30,25 @@ import { saveTimezone } from "@/server/actions"
 
 const emptySubscribe = () => () => {}
 
+let clockNow = 0
+
+function subscribeToClock(onStoreChange: () => void) {
+  clockNow = Date.now()
+  const id = window.setInterval(() => {
+    clockNow = Date.now()
+    onStoreChange()
+  }, 30_000)
+  return () => window.clearInterval(id)
+}
+
+function getClockSnapshot() {
+  return clockNow
+}
+
+function getServerClockSnapshot() {
+  return 0
+}
+
 function browserTimeZone() {
   return Intl.DateTimeFormat().resolvedOptions().timeZone
 }
@@ -51,17 +70,15 @@ function TimezoneMetaLine({
   now: Date | null
 }) {
   if (!now) {
-    return (
-      <span className="text-xs text-muted-foreground">
-        {item.region}
-      </span>
-    )
+    return <span className="text-xs text-muted-foreground">{item.region}</span>
   }
 
   const meta = timeZoneDisplayMeta(item.value, now)
   return (
     <span className="text-xs text-muted-foreground">
-      {[item.region, meta.abbreviation, meta.offset].filter(Boolean).join(" · ")}
+      {[item.region, meta.abbreviation, meta.offset]
+        .filter(Boolean)
+        .join(" · ")}
     </span>
   )
 }
@@ -82,7 +99,7 @@ function TimezoneOptionRow({
         <TimezoneMetaLine item={item} now={now} />
       </span>
       {time ? (
-        <span className="shrink-0 font-mono text-xs tabular-nums text-muted-foreground">
+        <span className="shrink-0 font-mono text-xs text-muted-foreground tabular-nums">
           {time}
         </span>
       ) : null}
@@ -103,19 +120,18 @@ export function TimezoneForm({ timezones }: { timezones: string[] }) {
   )
   const [selectedId, setSelectedId] = useState<string | null>(null)
   const [error, setError] = useState<string | null>(null)
-  const [now, setNow] = useState<Date | null>(null)
+  const nowMs = useSyncExternalStore(
+    subscribeToClock,
+    getClockSnapshot,
+    getServerClockSnapshot
+  )
+  const now = nowMs > 0 ? new Date(nowMs) : null
 
   const timezoneId =
     selectedId ??
     (timezones.includes(detectedId) ? detectedId : (timezones[0] ?? "UTC"))
   const selected = findTimezoneItem(groups, timezoneId)
   const usingDetected = selected?.value === detected?.value
-
-  useEffect(() => {
-    setNow(new Date())
-    const id = window.setInterval(() => setNow(new Date()), 30_000)
-    return () => window.clearInterval(id)
-  }, [])
 
   async function action(formData: FormData) {
     setError(null)
@@ -150,7 +166,9 @@ export function TimezoneForm({ timezones }: { timezones: string[] }) {
           </span>
           <span className="min-w-0 flex-1">
             <span className="block text-xs text-muted-foreground">
-              {usingDetected ? "Using time on this device" : "Suggested from this device"}
+              {usingDetected
+                ? "Using time on this device"
+                : "Suggested from this device"}
             </span>
             <TimezoneOptionRow item={detected} now={now} />
           </span>
@@ -158,7 +176,10 @@ export function TimezoneForm({ timezones }: { timezones: string[] }) {
       ) : null}
 
       <div className="flex flex-col gap-2">
-        <label htmlFor="timezone-search" className="text-sm text-muted-foreground">
+        <label
+          htmlFor="timezone-search"
+          className="text-sm text-muted-foreground"
+        >
           Or search for a city
         </label>
         <Combobox
@@ -172,10 +193,10 @@ export function TimezoneForm({ timezones }: { timezones: string[] }) {
           isItemEqualToValue={(itemValue, value) =>
             Boolean(
               itemValue &&
-                value &&
-                "value" in itemValue &&
-                "value" in value &&
-                itemValue.value === value.value
+              value &&
+              "value" in itemValue &&
+              "value" in value &&
+              itemValue.value === value.value
             )
           }
           itemToStringLabel={(item) =>
