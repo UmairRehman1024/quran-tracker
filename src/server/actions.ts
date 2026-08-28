@@ -6,7 +6,7 @@ import { redirect } from "next/navigation"
 
 import { db } from "@/db/db"
 import { quranLogs } from "@/db/schema"
-import { todayInTimezone, yesterdayInTimezone } from "@/lib/dates"
+import { todayInTimezone, yesterdayInTimezone, isLoggableDate, isRemovableDate } from "@/lib/dates"
 import { currentStreak, longestStreak } from "@/lib/streak"
 import { isValidTimeZone, timezoneFromPublicMetadata } from "@/lib/timezone"
 
@@ -53,6 +53,27 @@ async function getUserLogDates(userId: string): Promise<string[]> {
   return logs.map((log) => log.date)
 }
 
+async function streakPayload(
+  userId: string,
+  timezone: string
+): Promise<{
+  currentStreak: number
+  longestStreak: number
+  logDates: string[]
+  today: string
+}> {
+  const today = todayInTimezone(timezone)
+  const yesterday = yesterdayInTimezone(timezone)
+  const logDates = await getUserLogDates(userId)
+
+  return {
+    currentStreak: currentStreak(logDates, today, yesterday),
+    longestStreak: longestStreak(logDates),
+    logDates,
+    today,
+  }
+}
+
 export async function addQuranLog() {
   const authResult = await requireClerkUserWithTimezone()
   if (!authResult.ok) return authResult
@@ -93,6 +114,70 @@ export async function addQuranLog() {
   }
 }
 
+export async function addQuranLogForDate(date: string) {
+  const authResult = await requireClerkUserWithTimezone()
+  if (!authResult.ok) return authResult
+
+  const { userId, timezone } = authResult
+  const today = todayInTimezone(timezone)
+
+  if (!isLoggableDate(date, today)) {
+    return { ok: false as const, error: "invalid_date" as const }
+  }
+
+  const [existing] = await db
+    .select({ id: quranLogs.id })
+    .from(quranLogs)
+    .where(and(eq(quranLogs.userId, userId), eq(quranLogs.date, date)))
+    .limit(1)
+
+  if (existing) {
+    return { ok: false as const, error: "already_exists" as const }
+  }
+
+  try {
+    await db.insert(quranLogs).values({
+      userId,
+      date,
+    })
+  } catch (error) {
+    if (isUniqueViolation(error)) {
+      return { ok: false as const, error: "already_exists" as const }
+    }
+    throw error
+  }
+
+  const payload = await streakPayload(userId, timezone)
+
+  return {
+    ok: true as const,
+    ...payload,
+  }
+}
+
+export async function removeQuranLogForDate(date: string) {
+  const authResult = await requireClerkUserWithTimezone()
+  if (!authResult.ok) return authResult
+
+  const { userId, timezone } = authResult
+  const today = todayInTimezone(timezone)
+
+  if (!isRemovableDate(date, today)) {
+    return { ok: false as const, error: "invalid_date" as const }
+  }
+
+  await db
+    .delete(quranLogs)
+    .where(and(eq(quranLogs.userId, userId), eq(quranLogs.date, date)))
+
+  const payload = await streakPayload(userId, timezone)
+
+  return {
+    ok: true as const,
+    ...payload,
+  }
+}
+
 export async function getHomeData() {
   const authResult = await requireClerkUserWithTimezone()
   if (!authResult.ok) return authResult
@@ -105,6 +190,7 @@ export async function getHomeData() {
 
   return {
     ok: true as const,
+    today,
     currentStreak: currentStreak(logDates, today, yesterday),
     longestStreak: longestStreak(logDates),
     checkedInToday: logDates.includes(today),

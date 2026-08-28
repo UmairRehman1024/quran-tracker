@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest"
 
 import {
   calendarDateInTimezone,
+  isLoggableDate,
+  isRemovableDate,
+  isValidCalendarDate,
   previousCalendarDay,
   todayInTimezone,
   yesterdayInTimezone,
@@ -78,6 +81,44 @@ describe("calendarDateInTimezone", () => {
     expect(calendarDateInTimezone(repeated1Am, "America/New_York")).toBe(
       "2026-11-01"
     )
+  })
+})
+
+describe("isValidCalendarDate", () => {
+  it("accepts valid YYYY-MM-DD strings", () => {
+    expect(isValidCalendarDate("2026-08-17")).toBe(true)
+    expect(isValidCalendarDate("2024-02-29")).toBe(true)
+  })
+
+  it("rejects malformed or impossible dates", () => {
+    expect(isValidCalendarDate("2026-8-17")).toBe(false)
+    expect(isValidCalendarDate("2026-08-32")).toBe(false)
+    expect(isValidCalendarDate("2026-02-29")).toBe(false)
+    expect(isValidCalendarDate("")).toBe(false)
+  })
+})
+
+describe("isLoggableDate", () => {
+  const today = "2026-08-19"
+
+  it("allows past dates and today", () => {
+    expect(isLoggableDate("2026-08-18", today)).toBe(true)
+    expect(isLoggableDate(today, today)).toBe(true)
+  })
+
+  it("rejects future dates and invalid input", () => {
+    expect(isLoggableDate("2026-08-20", today)).toBe(false)
+    expect(isLoggableDate("not-a-date", today)).toBe(false)
+  })
+})
+
+describe("isRemovableDate", () => {
+  const today = "2026-08-19"
+
+  it("allows only dates strictly before today", () => {
+    expect(isRemovableDate("2026-08-18", today)).toBe(true)
+    expect(isRemovableDate(today, today)).toBe(false)
+    expect(isRemovableDate("2026-08-20", today)).toBe(false)
   })
 })
 

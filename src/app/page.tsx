@@ -21,6 +21,7 @@ export default async function Page() {
   const longestStreak = home.ok ? home.longestStreak : 0
   const checkedInToday = home.ok ? home.checkedInToday : false
   const readDates = home.ok ? home.logDates : []
+  const today = home.ok ? home.today : ""
 
   return (
     <main className="flex min-h-svh flex-col px-6 py-8 sm:px-10 sm:py-10">
@@ -31,7 +32,7 @@ export default async function Page() {
       </div>
 
       <div className="flex w-full flex-1 flex-col items-center">
-        <WeeklyCalendar readDates={readDates} />
+        <WeeklyCalendar readDates={readDates} today={today} />
       </div>
 
       <footer className="mx-auto w-full max-w-md space-y-5 pb-2">

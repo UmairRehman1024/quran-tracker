@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useState } from "react"
+import { useEffect, useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { addQuranLog } from "@/server/actions"
@@ -10,6 +10,10 @@ import { toast } from "@/components/ui/toast"
 export function CheckInButton({ checkedInToday }: { checkedInToday: boolean }) {
   const router = useRouter()
   const [read, setRead] = useState(checkedInToday)
+
+  useEffect(() => {
+    setRead(checkedInToday)
+  }, [checkedInToday])
 
   return (
     <button

@@ -45,3 +45,27 @@ export function previousCalendarDay(date: string): string {
 export function yesterdayInTimezone(timeZone: string, now = new Date()): string {
   return previousCalendarDay(todayInTimezone(timeZone, now))
 }
+
+const CALENDAR_DATE_RE = /^\d{4}-\d{2}-\d{2}$/
+
+/** True when `date` is a real YYYY-MM-DD calendar day. */
+export function isValidCalendarDate(date: string): boolean {
+  if (!CALENDAR_DATE_RE.test(date)) return false
+  const [year, month, day] = date.split("-").map(Number)
+  const utc = new Date(Date.UTC(year, month - 1, day))
+  return (
+    utc.getUTCFullYear() === year &&
+    utc.getUTCMonth() === month - 1 &&
+    utc.getUTCDate() === day
+  )
+}
+
+/** True when a reading can be logged for `date` (today or earlier). */
+export function isLoggableDate(date: string, today: string): boolean {
+  return isValidCalendarDate(date) && date <= today
+}
+
+/** True when a logged past day can be removed (strictly before today). */
+export function isRemovableDate(date: string, today: string): boolean {
+  return isValidCalendarDate(date) && date < today
+}
