@@ -1,7 +1,7 @@
 "use client"
 
 import { useRouter } from "next/navigation"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 
 import { cn } from "@/lib/utils"
 import { addQuranLog } from "@/server/actions"
@@ -9,11 +9,15 @@ import { toast } from "@/components/ui/toast"
 
 export function CheckInButton({ checkedInToday }: { checkedInToday: boolean }) {
   const router = useRouter()
-  const [read, setRead] = useState(checkedInToday)
+  const [optimisticRead, setOptimisticRead] = useState(false)
+  const [prevCheckedInToday, setPrevCheckedInToday] = useState(checkedInToday)
 
-  useEffect(() => {
-    setRead(checkedInToday)
-  }, [checkedInToday])
+  if (checkedInToday !== prevCheckedInToday) {
+    setPrevCheckedInToday(checkedInToday)
+    setOptimisticRead(false)
+  }
+
+  const read = checkedInToday || optimisticRead
 
   return (
     <button
@@ -24,7 +28,7 @@ export function CheckInButton({ checkedInToday }: { checkedInToday: boolean }) {
         const result = await addQuranLog()
         if (!result.ok) {
           if (result.error === "already_exists") {
-            setRead(true)
+            setOptimisticRead(true)
             router.refresh()
             return
           }
@@ -44,7 +48,7 @@ export function CheckInButton({ checkedInToday }: { checkedInToday: boolean }) {
             title: "Checked in",
             description: "Come back tomorrow to keep your streak",
           })
-          setRead(true)
+          setOptimisticRead(true)
           router.refresh()
         }
       }}
