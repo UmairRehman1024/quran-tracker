@@ -2,7 +2,7 @@
 
 A daily Quran reading check-in. Sign in, pick your timezone once, then tap to log that you read today. Streaks follow your local calendar day, including around DST.
 
-**Live demo:** [quran-tracker.vercel.app](https://quran-habit.com)
+**Live demo:** [quran-habit.com](https://quran-habit.com)
 
 <img width="393" height="870" alt="image" src="https://github.com/user-attachments/assets/5e0595a4-6b25-46ea-a33a-56518672e4b2" />
 
