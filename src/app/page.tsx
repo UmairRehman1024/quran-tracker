@@ -1,4 +1,5 @@
 import { currentUser } from "@clerk/nextjs/server"
+import Link from "next/link"
 import { redirect } from "next/navigation"
 
 import { CheckInButton } from "@/components/check-in-button"
@@ -39,6 +40,14 @@ export default async function Page() {
         <div className="h-px w-full bg-border" />
         <p className="text-center text-sm leading-relaxed font-light text-muted-foreground">
           &ldquo;{QUOTE}&rdquo;
+        </p>
+        <p className="text-center text-xs text-muted-foreground">
+          <Link
+            href="/privacy"
+            className="underline-offset-4 hover:text-foreground hover:underline"
+          >
+            Privacy
+          </Link>
         </p>
       </footer>
     </main>
